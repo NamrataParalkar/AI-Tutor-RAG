@@ -23,4 +23,9 @@ env/
 .DS_Store
 Thumbs.db
 
-commands.txts
+commands.txtsnode_modules/
+.next/
+.env
+.env.local
+dist/
+build/

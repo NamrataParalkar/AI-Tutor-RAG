@@ -1,7 +1,20 @@
 from pathlib import Path
 from typing import List
+import logging
 
-from pypdf import PdfReader
+logging.getLogger("pypdf").setLevel(logging.ERROR)
+
+try:
+    import pymupdf
+    HAS_PYMUPDF = True
+except ImportError:
+    HAS_PYMUPDF = False
+
+if not HAS_PYMUPDF:
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        pass
 
 
 class PdfLoader:
@@ -11,20 +24,42 @@ class PdfLoader:
         return sorted([path for path in directory.glob("*.pdf") if path.is_file()])
 
     def extract_text_from_pdf(self, path: Path) -> str:
-        reader = PdfReader(path)
-        pages = []
-        for page_number, page in enumerate(reader.pages, start=1):
+        # Fast C++ path with PyMuPDF
+        if HAS_PYMUPDF:
             try:
-                pages.append(page.extract_text() or "")
-            except Exception:
-                continue
-        return "\n".join(pages).strip()
+                doc = pymupdf.open(str(path))
+                pages = []
+                for page in doc:
+                    txt = page.get_text()
+                    if txt:
+                        pages.append(txt)
+                doc.close()
+                return "\n".join(pages).strip()
+            except Exception as e:
+                print(f"PyMuPDF error reading {path}: {e}. Falling back to pypdf.")
+
+        # Fallback path with pypdf
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(str(path))
+            pages = []
+            for page in reader.pages:
+                try:
+                    text = page.extract_text()
+                    if text:
+                        pages.append(text)
+                except Exception:
+                    continue
+            return "\n".join(pages).strip()
+        except Exception as e:
+            print(f"Error reading PDF {path}: {e}")
+            return ""
 
     def split_text_into_chunks(
         self,
         text: str,
-        min_words: int = 300,
-        max_words: int = 500,
+        min_words: int = 250,
+        max_words: int = 450,
     ) -> List[str]:
         normalized = " ".join(text.replace("\n", " ").split())
         if not normalized:

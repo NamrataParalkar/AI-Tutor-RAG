@@ -1,9 +1,14 @@
 fastapi
 uvicorn[standard]
 pypdf
+pymupdf
+fonttools
 sentence-transformers
-faiss-cpu
+numpy
+scikit-learn
+google-genai
 openai
 python-dotenv
-streamlit
+python-multipart
 requests
+streamlit
